@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { errorText } from "../api";
 
@@ -11,8 +11,10 @@ const roles = [
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const registered = location.state?.registered;
   const [role, setRole] = useState("student");
-  const [form, setForm] = useState({ email: "", password: "" });
+  const [form, setForm] = useState({ email: registered || "", password: "" });
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -69,6 +71,10 @@ export default function Login() {
               </button>
             ))}
           </div>
+
+          {registered && !error && role === "student" && (
+            <div className="alert alert-ok">Account created. Sign in with your new password.</div>
+          )}
 
           {error && <div className="alert">{error}</div>}
 

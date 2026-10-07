@@ -30,7 +30,7 @@ export default function Register() {
     try {
       const { confirm, ...payload } = form;
       await register(payload);
-      navigate("/student", { replace: true });
+      navigate("/login", { replace: true, state: { registered: payload.email } });
     } catch (err) {
       setError(errorText(err));
     } finally {

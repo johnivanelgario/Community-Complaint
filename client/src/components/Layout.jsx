@@ -27,7 +27,6 @@ const studentLinks = [
 export default function Layout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [open, setOpen] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const links = user.role === "admin" ? adminLinks : studentLinks;
 
@@ -38,7 +37,7 @@ export default function Layout() {
 
   return (
     <div className="shell">
-      <aside className={`sidebar ${open ? "is-open" : ""}`}>
+      <aside className="sidebar">
         <div className="brand">
           <img src="/logo.svg" alt="" width="34" height="34" />
           <div>
@@ -49,7 +48,7 @@ export default function Layout() {
 
         <nav className="nav">
           {links.map((l) => (
-            <NavLink key={l.to} to={l.to} end={l.end} onClick={() => setOpen(false)}>
+            <NavLink key={l.to} to={l.to} end={l.end}>
               <Icon name={l.icon} />
               {l.label}
             </NavLink>
@@ -62,13 +61,8 @@ export default function Layout() {
         </button>
       </aside>
 
-      {open && <div className="scrim" onClick={() => setOpen(false)} />}
-
       <div className="main">
         <header className="topbar">
-          <button className="icon-btn menu-btn" onClick={() => setOpen(true)} aria-label="Open menu">
-            <Icon name="menu" />
-          </button>
           <div className="topbar-user">
             <div className="topbar-name">
               <strong>{fullName(user)}</strong>

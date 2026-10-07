@@ -25,7 +25,6 @@ export function AuthProvider({ children }) {
 
   const register = async (form) => {
     const { data } = await api.post("/auth/register", form);
-    saveSession(data);
     return data.user;
   };
 

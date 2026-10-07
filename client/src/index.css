@@ -1530,3 +1530,29 @@ table.clickable tbody tr:focus-visible {
   opacity: 0.6;
   cursor: default;
 }
+
+.btn-danger {
+  background: var(--rejected);
+  color: #fff;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #8f1f16;
+}
+
+.btn-small {
+  padding: 0.35rem 0.7rem;
+  font-size: 0.82rem;
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.ban-reason {
+  margin: 0.3rem 0 0;
+  max-width: 220px;
+  line-height: 1.35;
+}

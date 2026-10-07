@@ -15,7 +15,15 @@ export default function Login() {
   const registered = location.state?.registered;
   const [role, setRole] = useState("student");
   const [form, setForm] = useState({ email: registered || "", password: "" });
-  const [error, setError] = useState("");
+  const [error, setError] = useState(() => {
+    try {
+      const notice = sessionStorage.getItem("authNotice");
+      sessionStorage.removeItem("authNotice");
+      return notice || "";
+    } catch {
+      return "";
+    }
+  });
   const [busy, setBusy] = useState(false);
 
   const change = (e) => setForm({ ...form, [e.target.name]: e.target.value });

@@ -12,6 +12,9 @@ export async function protect(req, res, next) {
     if (!user || user.status !== "active") {
       return res.status(401).json({ message: "Your account is not active" });
     }
+    if (user.activeBan()) {
+      return res.status(401).json({ message: user.banMessage(), banned: true });
+    }
     req.user = user;
     next();
   } catch {

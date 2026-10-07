@@ -12,6 +12,11 @@ api.interceptors.response.use(
   (res) => res,
   (err) => {
     if (err.response?.status === 401 && !err.config.url.includes("/auth/login")) {
+      if (err.response.data?.banned) {
+        try {
+          sessionStorage.setItem("authNotice", err.response.data.message);
+        } catch {}
+      }
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       if (window.location.pathname !== "/login") window.location.href = "/login";

@@ -12,6 +12,13 @@ const userSchema = new mongoose.Schema(
     password: { type: String, required: true, minlength: 6, select: false },
     role: { type: String, enum: ["admin", "student"], default: "student" },
     status: { type: String, enum: ["active", "inactive"], default: "active" },
+    ban: {
+      type: { type: String, enum: ["none", "temporary", "permanent"], default: "none" },
+      reason: { type: String, default: "" },
+      until: Date,
+      at: Date,
+      by: { type: mongoose.Schema.Types.ObjectId, ref: "User" }
+    },
     lastLogin: Date
   },
   { timestamps: true }
@@ -25,6 +32,29 @@ userSchema.pre("save", async function (next) {
 
 userSchema.methods.matchPassword = function (entered) {
   return bcrypt.compare(entered, this.password);
+};
+
+userSchema.methods.activeBan = function () {
+  const ban = this.ban;
+  if (!ban || !ban.type || ban.type === "none") return null;
+  if (ban.type === "temporary" && (!ban.until || ban.until <= new Date())) return null;
+  return ban;
+};
+
+userSchema.methods.banMessage = function () {
+  const ban = this.activeBan();
+  if (!ban) return "";
+  const why = ban.reason ? ` Reason: ${ban.reason}` : "";
+  if (ban.type === "permanent") return `Your account has been banned.${why}`;
+  const when = ban.until.toLocaleString("en-PH", {
+    timeZone: "Asia/Manila",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  });
+  return `Your account is suspended until ${when}.${why}`;
 };
 
 userSchema.virtual("fullName").get(function () {

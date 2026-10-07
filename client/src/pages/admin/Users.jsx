@@ -5,7 +5,21 @@ import PageHead from "../../components/PageHead";
 import Modal from "../../components/Modal";
 import Avatar from "../../components/Avatar";
 import Icon from "../../components/Icon";
-import { fullName } from "../../utils/format";
+import { fullName, formatDateTime } from "../../utils/format";
+
+const BAN_LENGTHS = [
+  { days: 1, label: "1 day" },
+  { days: 3, label: "3 days" },
+  { days: 7, label: "7 days" },
+  { days: 30, label: "30 days" }
+];
+
+const activeBan = (u) => {
+  const ban = u.ban;
+  if (!ban || !ban.type || ban.type === "none") return null;
+  if (ban.type === "temporary" && (!ban.until || new Date(ban.until) <= new Date())) return null;
+  return ban;
+};
 
 const blank = {
   firstName: "",
@@ -27,6 +41,9 @@ export default function Users() {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(blank);
   const [error, setError] = useState("");
+  const [banning, setBanning] = useState(null);
+  const [banForm, setBanForm] = useState({ type: "temporary", days: 3, reason: "" });
+  const [banError, setBanError] = useState("");
 
   const load = async (q = search) => {
     setLoading(true);
@@ -86,6 +103,61 @@ export default function Users() {
     }
   };
 
+  const openBan = (u) => {
+    setBanForm({ type: "temporary", days: 3, reason: "" });
+    setBanError("");
+    setBanning(u);
+  };
+
+  const saveBan = async (e) => {
+    e.preventDefault();
+    setBanError("");
+    try {
+      const { data } = await api.post(`/users/${banning._id}/ban`, banForm);
+      setUsers(users.map((x) => (x._id === data._id ? data : x)));
+      setBanning(null);
+    } catch (err) {
+      setBanError(errorText(err));
+    }
+  };
+
+  const liftBan = async (u) => {
+    if (!window.confirm(`Lift the ban on ${fullName(u)}? They can sign in again right away.`)) return;
+    try {
+      const { data } = await api.post(`/users/${u._id}/unban`);
+      setUsers(users.map((x) => (x._id === data._id ? data : x)));
+    } catch (err) {
+      alert(errorText(err));
+    }
+  };
+
+  const statusCell = (u) => {
+    const ban = activeBan(u);
+    if (ban?.type === "permanent") {
+      return (
+        <>
+          <span className="badge badge-rejected">Banned</span>
+          <p className="muted small ban-reason">{ban.reason}</p>
+        </>
+      );
+    }
+    if (ban) {
+      return (
+        <>
+          <span className="badge badge-pending">Suspended</span>
+          <p className="muted small ban-reason">
+            Until {formatDateTime(ban.until)}
+            <br />
+            {ban.reason}
+          </p>
+        </>
+      );
+    }
+    return (
+      <span className={`badge badge-${u.status === "active" ? "resolved" : "rejected"}`}>{u.status}</span>
+    );
+  };
+
   return (
     <>
       <PageHead title="User management" sub={`${users.length} accounts`}>
@@ -131,15 +203,26 @@ export default function Users() {
                 <td>{u.email}</td>
                 <td>{u.phone || "–"}</td>
                 <td className="cap">{u.role}</td>
-                <td>
-                  <span className={`badge badge-${u.status === "active" ? "resolved" : "rejected"}`}>
-                    {u.status}
-                  </span>
-                </td>
+                <td>{statusCell(u)}</td>
                 <td className="row-actions">
                   <button className="icon-btn" onClick={() => openEdit(u)} aria-label="Edit user">
                     <Icon name="edit" size={16} />
                   </button>
+                  {u.role !== "admin" &&
+                    (activeBan(u) ? (
+                      <button className="btn btn-ghost btn-small" onClick={() => liftBan(u)}>
+                        Lift ban
+                      </button>
+                    ) : (
+                      <button
+                        className="icon-btn danger"
+                        onClick={() => openBan(u)}
+                        aria-label="Suspend or ban user"
+                        title="Suspend or ban"
+                      >
+                        <Icon name="ban" size={16} />
+                      </button>
+                    ))}
                   {u._id !== me._id && (
                     <button className="icon-btn danger" onClick={() => remove(u)} aria-label="Delete user">
                       <Icon name="trash" size={16} />
@@ -154,6 +237,73 @@ export default function Users() {
           <p className="muted empty">No one matches "{search}".</p>
         )}
       </div>
+
+      {banning && (
+        <Modal title={`Restrict ${fullName(banning)}`} onClose={() => setBanning(null)} width={440}>
+          <form className="stack" onSubmit={saveBan}>
+            <div className="role-switch" role="radiogroup" aria-label="Type">
+              {[
+                { value: "temporary", label: "Suspend" },
+                { value: "permanent", label: "Ban permanently" }
+              ].map((t) => (
+                <button
+                  key={t.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={banForm.type === t.value}
+                  className={banForm.type === t.value ? "is-active" : ""}
+                  onClick={() => setBanForm({ ...banForm, type: t.value })}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            {banForm.type === "temporary" ? (
+              <div className="field">
+                <span>How long</span>
+                <div className="chip-row">
+                  {BAN_LENGTHS.map((b) => (
+                    <button
+                      key={b.days}
+                      type="button"
+                      className={`tab ${banForm.days === b.days ? "is-active" : ""}`}
+                      onClick={() => setBanForm({ ...banForm, days: b.days })}
+                    >
+                      {b.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="muted small">They can sign in again automatically when it ends.</p>
+              </div>
+            ) : (
+              <p className="muted small">They won't be able to sign in until an admin lifts the ban.</p>
+            )}
+
+            <label className="field">
+              <span>Reason (the student will see this)</span>
+              <textarea
+                rows={3}
+                value={banForm.reason}
+                onChange={(e) => setBanForm({ ...banForm, reason: e.target.value })}
+                placeholder="e.g. Filing spam complaints"
+                required
+              />
+            </label>
+
+            {banError && <div className="alert">{banError}</div>}
+
+            <div className="modal-actions">
+              <button type="button" className="btn btn-ghost" onClick={() => setBanning(null)}>
+                Cancel
+              </button>
+              <button className="btn btn-danger">
+                {banForm.type === "permanent" ? "Ban account" : `Suspend for ${banForm.days} day${banForm.days > 1 ? "s" : ""}`}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
 
       {editing && (
         <Modal title={editing === "new" ? "Add user" : "Edit user"} onClose={() => setEditing(null)}>

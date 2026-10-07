@@ -118,6 +118,12 @@ router.post("/login", async (req, res, next) => {
     if (user.status !== "active") {
       return res.status(403).json({ message: "Your account is inactive, contact the admin" });
     }
+    if (user.activeBan()) {
+      return res.status(403).json({ message: user.banMessage(), banned: true });
+    }
+    if (user.ban?.type && user.ban.type !== "none") {
+      user.ban = { type: "none" };
+    }
     user.lastLogin = new Date();
     await user.save();
     await addLog(user._id, `${user.fullName} logged in as ${user.role}`, "auth");

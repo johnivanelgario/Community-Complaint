@@ -1,12 +1,12 @@
 # Community Complaint & Services (MERN)
 
 ## Requirements
-- Node.js 18 or newer
+- node.js 18 or newer
 - MongoDB running locally (or a MongoDB Atlas connection string)
 
 ## Setup
 
-Open the project in VS Code, then open two terminals.
+open the project in VS Code, then open two terminals.
 
 Terminal 1, the API:
 ```
